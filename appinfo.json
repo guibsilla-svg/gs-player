@@ -1,0 +1,11 @@
+{
+  "id": "com.pessoal.gsplayer",
+  "version": "0.6.0",
+  "vendor": "GUIB'S",
+  "type": "web",
+  "main": "index.html",
+  "title": "GS PLAYER",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080"
+}
