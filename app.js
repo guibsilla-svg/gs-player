@@ -21,8 +21,8 @@ function loadCatalog(items,message=''){for(const k of Object.keys(catalog))catal
 async function loadPublicLive(){
  const status=$('#public-status');
  const sources=[
-  {url:'https://iptv-org.github.io/iptv/countries/br.m3u',label:'IPTV-org · Brasil'},
-  {url:'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',label:'Free-TV · lista global'}
+  {url:'https://cdn.jsdelivr.net/gh/streamline-iptv/iptv-playlists@dist/countries/br.m3u',label:'Lista brasileira curada · canais públicos'},
+  {url:'https://iptv-org.github.io/iptv/countries/br.m3u',label:'IPTV-org · Brasil'}
  ];
  if(status)status.textContent='Carregando canais públicos…';
  let lastError=null;
