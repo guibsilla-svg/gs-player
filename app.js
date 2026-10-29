@@ -100,7 +100,7 @@ function play(item){
  const v=overlay.querySelector('video'),status=overlay.querySelector('#player-status');let hls=null,started=false;
  const close=()=>{if(hls){try{hls.destroy()}catch(ignore){}hls=null}closeOverlay(overlay)};
  overlay.querySelector('#player-close').onclick=close;
- const startPlayback=()=>{try{status.textContent='Toque em Reproduzir para iniciar o vídeo.';}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
+ const startPlayback=()=>{status.textContent='Solicitando reprodução…';const result=v.play();if(result&&typeof result.then==='function'){result.then(()=>{status.textContent='Reproduzindo ao vivo.'}).catch(error=>{status.textContent='O navegador não iniciou este canal ('+(error&&error.name||'erro de reprodução')+'). Tente tocar no botão de reprodução dentro do próprio vídeo; se falhar também, o link pode estar indisponível ou incompatível.';});}};
  overlay.querySelector('#player-play').onclick=startPlayback;
  overlay.querySelector('#player-pause').onclick=()=>{v.pause();status.textContent='Reprodução pausada.'};
  v.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='MediaPlay'||e.key==='Play'){e.preventDefault();startPlayback()}else if(e.key==='MediaPause'||e.key==='Pause'){e.preventDefault();v.pause()}});
