@@ -111,14 +111,14 @@ function play(item){
  v.oncanplay=()=>status.textContent='Vídeo pronto. Se não iniciar, selecione Reproduzir.';
  v.onplaying=()=>{started=true;status.textContent='Reproduzindo ao vivo.'};
  v.onwaiting=()=>{if(!started)status.textContent='Aguardando dados do canal…'};
- v.onerror=()=>status.textContent='A transmissão falhou. O canal pode estar fora do ar, bloqueado por região ou incompatível com a TV. Tente outro canal.';
+ v.onerror=()=>{const e=v.error;const codes={1:'reprodução cancelada',2:'erro de rede',3:'formato ou codec de vídeo incompatível',4:'formato ou fonte não suportada'};status.textContent='Falha no vídeo: '+(e?(codes[e.code]||('código '+e.code)):'erro desconhecido')+'. Como o SBT funciona, este canal pode estar indisponível ou usar um formato incompatível.';};
  const url=String(item.url),isHls=/\.m3u8(?:$|[?#])/i.test(url);
  if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o canal.';}
  else if(isHls&&window.Hls&&window.Hls.isSupported()){
   hls=new Hls({enableWorker:false});
   hls.loadSource(url);hls.attachMedia(v);
   hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Canal carregado. Toque em Reproduzir para começar.'});
-  hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){status.textContent='Não foi possível carregar esta transmissão (erro HLS). Pode estar offline ou bloquear acesso externo.';try{hls.destroy()}catch(ignore){}hls=null;}});
+  hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){const kind=data.type||'erro';const detail=data.details||'detalhe indisponível';status.textContent='Falha HLS ('+kind+'): '+detail+'. O canal pode estar offline, bloquear acesso externo ou usar um formato incompatível.';try{hls.destroy()}catch(ignore){}hls=null;}});
  }else{v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o vídeo.'}
  // Put keyboard/remote focus on the video first so the TV's Play key targets the player.
  v.focus();
