@@ -1,5 +1,5 @@
 /* GS PLAYER offline shell cache. Streaming URLs are never cached. */
-var CACHE_NAME = 'gs-player-shell-v0.7.3';
+var CACHE_NAME = 'gs-player-shell-v0.7.4';
 var SHELL = ['./', './index.html', './style.css', './app.js', './manifest.webmanifest', './icon.png'];
 self.addEventListener('install', function (event) {
   event.waitUntil(caches.open(CACHE_NAME).then(function (cache) { return cache.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
