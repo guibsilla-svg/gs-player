@@ -100,7 +100,7 @@ function play(item){
  const v=overlay.querySelector('video'),status=overlay.querySelector('#player-status');let hls=null,started=false;
  const close=()=>{if(hls){try{hls.destroy()}catch(ignore){}hls=null}closeOverlay(overlay)};
  overlay.querySelector('#player-close').onclick=close;
- const startPlayback=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='A TV recusou a reprodução automática. Use o botão Reproduzir ou a tecla Play do controle remoto.'});}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
+ const startPlayback=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='A reprodução automática foi bloqueada. Toque em Reproduzir no player.'});}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
  overlay.querySelector('#player-play').onclick=startPlayback;
  overlay.querySelector('#player-pause').onclick=()=>{v.pause();status.textContent='Reprodução pausada.'};
  v.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='MediaPlay'||e.key==='Play'){e.preventDefault();startPlayback()}else if(e.key==='MediaPause'||e.key==='Pause'){e.preventDefault();v.pause()}});
@@ -113,13 +113,13 @@ function play(item){
  v.onwaiting=()=>{if(!started)status.textContent='Aguardando dados do canal…'};
  v.onerror=()=>status.textContent='A transmissão falhou. O canal pode estar fora do ar, bloqueado por região ou incompatível com a TV. Tente outro canal.';
  const url=String(item.url),isHls=/\.m3u8(?:$|[?#])/i.test(url);
- if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='Selecione Reproduzir no controle remoto.'});}
+ if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='Toque no botão Reproduzir do player para iniciar no celular.'});}
  else if(isHls&&window.Hls&&window.Hls.isSupported()){
   hls=new Hls({enableWorker:false});
   hls.loadSource(url);hls.attachMedia(v);
-  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Lista de vídeo carregada; iniciando…';const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Selecione Reproduzir no controle remoto.')});
+  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Lista de vídeo carregada; iniciando…';const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Toque no botão Reproduzir do player para iniciar no celular.')});
   hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){status.textContent='Não foi possível carregar esta transmissão (erro HLS). Pode estar offline ou bloquear acesso externo.';try{hls.destroy()}catch(ignore){}hls=null;}});
- }else{v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Selecione Reproduzir no controle remoto.')}
+ }else{v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Toque no botão Reproduzir do player para iniciar no celular.')}
  // Put keyboard/remote focus on the video first so the TV's Play key targets the player.
  v.focus();
 }
