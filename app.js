@@ -96,11 +96,11 @@ function makeOverlay(className){const overlay=document.createElement('div');over
 function play(item){
  if(!item.url){alert('Este item não tem um endereço de vídeo.');return;}
  const overlay=makeOverlay('player-overlay');
- overlay.innerHTML='<div class="player-panel"><div class="player-head"><strong>'+esc(item.name)+'</strong><button class="secondary" id="player-close">Fechar ✕</button></div><video id="player-video" controls autoplay playsinline tabindex="0"></video><div class="dialog-actions"><button class="primary" id="player-play">▶ Reproduzir</button><button class="secondary" id="player-pause">Ⅱ Pausar</button></div><p id="player-status" class="note">Conectando à transmissão…</p><p class="note">Se a TV bloquear a reprodução automática, selecione Reproduzir. Alguns canais também podem usar codecs incompatíveis.</p></div>';
+ overlay.innerHTML='<div class="player-panel"><div class="player-head"><strong>'+esc(item.name)+'</strong><button class="secondary" id="player-close">Fechar ✕</button></div><video id="player-video" controls playsinline webkit-playsinline preload="metadata" tabindex="0"></video><div class="dialog-actions"><button class="primary" id="player-play">▶ Reproduzir</button><button class="secondary" id="player-pause">Ⅱ Pausar</button></div><p id="player-status" class="note">Conectando à transmissão…</p><p class="note">Se a TV bloquear a reprodução automática, selecione Reproduzir. Alguns canais também podem usar codecs incompatíveis.</p></div>';
  const v=overlay.querySelector('video'),status=overlay.querySelector('#player-status');let hls=null,started=false;
  const close=()=>{if(hls){try{hls.destroy()}catch(ignore){}hls=null}closeOverlay(overlay)};
  overlay.querySelector('#player-close').onclick=close;
- const startPlayback=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='A reprodução automática foi bloqueada. Toque em Reproduzir no player.'});}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
+ const startPlayback=()=>{try{status.textContent='Toque em Reproduzir para iniciar o vídeo.';}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
  overlay.querySelector('#player-play').onclick=startPlayback;
  overlay.querySelector('#player-pause').onclick=()=>{v.pause();status.textContent='Reprodução pausada.'};
  v.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='MediaPlay'||e.key==='Play'){e.preventDefault();startPlayback()}else if(e.key==='MediaPause'||e.key==='Pause'){e.preventDefault();v.pause()}});
@@ -113,13 +113,13 @@ function play(item){
  v.onwaiting=()=>{if(!started)status.textContent='Aguardando dados do canal…'};
  v.onerror=()=>status.textContent='A transmissão falhou. O canal pode estar fora do ar, bloqueado por região ou incompatível com a TV. Tente outro canal.';
  const url=String(item.url),isHls=/\.m3u8(?:$|[?#])/i.test(url);
- if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='Toque no botão Reproduzir do player para iniciar no celular.'});}
+ if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o canal.';}
  else if(isHls&&window.Hls&&window.Hls.isSupported()){
   hls=new Hls({enableWorker:false});
   hls.loadSource(url);hls.attachMedia(v);
-  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Lista de vídeo carregada; iniciando…';const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Toque no botão Reproduzir do player para iniciar no celular.')});
+  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Canal carregado. Toque em Reproduzir para começar.'});
   hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){status.textContent='Não foi possível carregar esta transmissão (erro HLS). Pode estar offline ou bloquear acesso externo.';try{hls.destroy()}catch(ignore){}hls=null;}});
- }else{v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Toque no botão Reproduzir do player para iniciar no celular.')}
+ }else{v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o vídeo.'}
  // Put keyboard/remote focus on the video first so the TV's Play key targets the player.
  v.focus();
 }
