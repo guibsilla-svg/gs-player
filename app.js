@@ -96,10 +96,14 @@ function makeOverlay(className){const overlay=document.createElement('div');over
 function play(item){
  if(!item.url){alert('Este item não tem um endereço de vídeo.');return;}
  const overlay=makeOverlay('player-overlay');
- overlay.innerHTML='<div class="player-panel"><div class="player-head"><strong>'+esc(item.name)+'</strong><button class="secondary" id="player-close">Fechar ✕</button></div><video id="player-video" controls autoplay playsinline tabindex="0"></video><p id="player-status" class="note">Conectando à transmissão…</p><p class="note">A transmissão depende de o canal estar ativo, permitir acesso externo e usar formato compatível com esta TV.</p></div>';
+ overlay.innerHTML='<div class="player-panel"><div class="player-head"><strong>'+esc(item.name)+'</strong><button class="secondary" id="player-close">Fechar ✕</button></div><video id="player-video" controls autoplay playsinline tabindex="0"></video><div class="dialog-actions"><button class="primary" id="player-play">▶ Reproduzir</button><button class="secondary" id="player-pause">Ⅱ Pausar</button></div><p id="player-status" class="note">Conectando à transmissão…</p><p class="note">Se a TV bloquear a reprodução automática, selecione Reproduzir. Alguns canais também podem usar codecs incompatíveis.</p></div>';
  const v=overlay.querySelector('video'),status=overlay.querySelector('#player-status');let hls=null,started=false;
  const close=()=>{if(hls){try{hls.destroy()}catch(ignore){}hls=null}closeOverlay(overlay)};
  overlay.querySelector('#player-close').onclick=close;
+ const startPlayback=()=>{try{const p=v.play();if(p&&p.catch)p.catch(()=>{status.textContent='A TV recusou a reprodução automática. Use o botão Reproduzir ou a tecla Play do controle remoto.'});}catch(error){status.textContent='Não foi possível iniciar o vídeo neste dispositivo.'}};
+ overlay.querySelector('#player-play').onclick=startPlayback;
+ overlay.querySelector('#player-pause').onclick=()=>{v.pause();status.textContent='Reprodução pausada.'};
+ v.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='MediaPlay'||e.key==='Play'){e.preventDefault();startPlayback()}else if(e.key==='MediaPause'||e.key==='Pause'){e.preventDefault();v.pause()}});
  overlay.addEventListener('click',e=>{if(e.target===overlay)close()});
  const onKey=e=>{if(e.key==='Escape'){close();document.removeEventListener('keydown',onKey)}};
  document.addEventListener('keydown',onKey);
@@ -116,7 +120,8 @@ function play(item){
   hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Lista de vídeo carregada; iniciando…';const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Selecione Reproduzir no controle remoto.')});
   hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){status.textContent='Não foi possível carregar esta transmissão (erro HLS). Pode estar offline ou bloquear acesso externo.';try{hls.destroy()}catch(ignore){}hls=null;}});
  }else{v.src=url;const p=v.play();if(p&&p.catch)p.catch(()=>status.textContent='Selecione Reproduzir no controle remoto.')}
- overlay.querySelector('#player-close').focus();
+ // Put keyboard/remote focus on the video first so the TV's Play key targets the player.
+ v.focus();
 }
 function apiUrl(action,extra={}){const u=new URL(xtream.server+'/player_api.php');u.searchParams.set('username',xtream.username);u.searchParams.set('password',xtream.password);if(action)u.searchParams.set('action',action);Object.entries(extra).forEach(([k,v])=>u.searchParams.set(k,v));return u.toString();}
 async function getJson(url){const r=await fetch(url);if(!r.ok)throw new Error('Resposta HTTP '+r.status);return r.json();}
