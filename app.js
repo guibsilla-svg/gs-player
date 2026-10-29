@@ -18,6 +18,37 @@ function emptyMarkup(t,m){return '<strong>'+esc(t)+'</strong><p>'+esc(m)+'</p>'}
 function render(items,target,empty='Nenhum item encontrado'){if(!target)return;if(!items.length){target.className='empty';target.innerHTML=emptyMarkup(empty,'O catálogo é carregado automaticamente quando a fonte está acessível. Você também pode conectar sua própria fonte nas configurações.');return;}target.className='results';target.innerHTML=items.slice(0,500).map((x,i)=>'<button type="button" class="result" data-result="'+i+'" aria-label="Abrir '+esc(x.name)+'">'+(x.logo?'<img class="poster" loading="lazy" src="'+esc(x.logo)+'" alt="" onerror="this.style.display=\'none\'">':'<span class="poster-placeholder">'+esc((x.name||'GS').slice(0,2).toUpperCase())+'</span>')+'<strong>'+esc(x.name)+'</strong><small>'+esc(x.group||typeLabel(x.type))+'</small></button>').join('');target.onclick=e=>{const b=e.target.closest('[data-result]');if(!b||!target.contains(b))return;e.preventDefault();e.stopPropagation();const i=Number(b.getAttribute('data-result'));if(Number.isInteger(i)&&items[i]){if(items[i].type==='filmes'&&items[i].url)play(items[i]);else details(items[i]);}};}
 function renderSections(){for(const [id,items] of Object.entries(catalog))render(items,$('#list-'+id),id==='ao-vivo'?'Nenhum canal carregado':id==='filmes'?'Nenhum filme identificado':'Nenhuma série identificada');$('#catalog-count').textContent=Object.values(catalog).reduce((n,a)=>n+a.length,0)+' itens carregados';}
 function loadCatalog(items,message=''){for(const k of Object.keys(catalog))catalog[k].length=0;items.forEach(x=>catalog[catalog[x.type]?x.type:'ao-vivo'].push(x));renderSections();$('#source-status').textContent=message||'Fonte carregada';}
+async function loadPublicLive(){
+ const status=$('#public-status');
+ const sources=[
+  {url:'https://iptv-org.github.io/iptv/countries/br.m3u',label:'IPTV-org · Brasil'},
+  {url:'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',label:'Free-TV · lista global'}
+ ];
+ if(status)status.textContent='Carregando canais públicos…';
+ let lastError=null;
+ for(const source of sources){
+  try{
+   const response=await fetch(source.url,{cache:'no-cache'});
+   if(!response.ok)throw new Error('HTTP '+response.status);
+   const text=await response.text();
+   if(!text.includes('#EXTINF'))throw new Error('Lista vazia ou formato inválido');
+   try{localStorage.setItem('gsplayer.public.ao-vivo',text)}catch(ignore){}
+   const items=parseM3U(text).map(x=>({...x,type:'ao-vivo',source:'public-m3u',id:'public-live-'+x.url}));
+   if(!items.length)throw new Error('Nenhum canal reconhecido');
+   catalog['ao-vivo'].length=0;catalog['ao-vivo'].push(...items);
+   renderSections();
+   if(status)status.textContent=items.length+' canais públicos carregados de '+source.label+'. Alguns podem ter restrição regional ou estar temporariamente fora do ar.';
+   $('#source-status').textContent='Canais públicos carregados';
+   return items.length;
+  }catch(e){lastError=e;}
+ }
+ try{
+  const cached=localStorage.getItem('gsplayer.public.ao-vivo');
+  if(cached){const items=parseM3U(cached).map(x=>({...x,type:'ao-vivo',source:'public-m3u-cache',id:'public-live-'+x.url}));catalog['ao-vivo'].length=0;catalog['ao-vivo'].push(...items);renderSections();if(status)status.textContent='Sem conexão com as listas públicas. Exibindo '+items.length+' canais da última carga.';return items.length;}
+ }catch(ignore){}
+ if(status)status.textContent='Não foi possível baixar listas públicas de canais ('+(lastError&&lastError.message||'erro de rede')+'). Tente novamente ou importe uma playlist autorizada.';
+ return 0;
+}
 async function loadPublicList(kind, options={}){
  const status=$('#public-status');
  const urls={filmes:'https://raw.githubusercontent.com/OnlineM3U/publicdomainm3u/main/movies.m3u',series:'https://raw.githubusercontent.com/OnlineM3U/publicdomainm3u/main/series.m3u'};
@@ -59,7 +90,7 @@ async function loadPublicList(kind, options={}){
   return 0;
  }
 }
-$('#load-public-movies').addEventListener('click',()=>loadPublicList('filmes'));$('#load-public-series').addEventListener('click',()=>loadPublicList('series'));
+$('#load-public-live').addEventListener('click',loadPublicLive);$('#load-public-movies').addEventListener('click',()=>loadPublicList('filmes'));$('#load-public-series').addEventListener('click',()=>loadPublicList('series'));
 function closeOverlay(overlay){if(!overlay)return;const v=overlay.querySelector('video');if(v){try{v.pause();v.removeAttribute('src');v.load();}catch(ignore){}}overlay.remove();}
 function makeOverlay(className){const overlay=document.createElement('div');overlay.className='gs-overlay '+className;overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');document.body.appendChild(overlay);return overlay;}
 function play(item){if(!item.url){alert('Este item não tem um endereço de vídeo.');return;}const overlay=makeOverlay('player-overlay');overlay.innerHTML='<div class="player-panel"><div class="player-head"><strong>'+esc(item.name)+'</strong><button class="secondary" id="player-close">Fechar ✕</button></div><video id="player-video" controls autoplay playsinline tabindex="0"></video><p id="player-status" class="note">Tentando reproduzir o endereço da fonte…</p><p class="note">A TV aceita HTTP/HTTPS e HLS, mas o vídeo também precisa usar codecs compatíveis.</p></div>';const v=overlay.querySelector('video'),status=overlay.querySelector('#player-status');const close=()=>closeOverlay(overlay);overlay.querySelector('#player-close').onclick=close;overlay.addEventListener('click',e=>{if(e.target===overlay)close()});const onKey=e=>{if(e.key==='Escape'){close();document.removeEventListener('keydown',onKey);}};document.addEventListener('keydown',onKey);v.src=item.url;v.onerror=()=>status.textContent='Não foi possível reproduzir. O endereço pode estar indisponível, bloquear acesso externo ou usar um formato incompatível.';v.onloadedmetadata=()=>status.textContent='Arquivo reconhecido. Preparando reprodução…';v.oncanplay=()=>status.textContent='Vídeo pronto. Se não iniciar sozinho, selecione Reproduzir.';v.onplaying=()=>status.textContent='Reproduzindo.';v.onwaiting=()=>status.textContent='Carregando vídeo…';const attempt=v.play();if(attempt&&typeof attempt.catch==='function')attempt.catch(()=>status.textContent='Selecione Reproduzir no controle remoto para iniciar.');overlay.querySelector('#player-close').focus();}
@@ -76,5 +107,5 @@ document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,sele
 render(saved(),$('#saved'),'Sua lista está vazia');renderSections();
 try{if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){navigator.serviceWorker.register('./sw.js').catch(function(){});}}catch(ignore){}
 // Start populating the public catalog automatically; no manual import is required.
-setTimeout(()=>{Promise.all([loadPublicList('filmes'),loadPublicList('series')]).then(([movies,series])=>{if(!movies&&!series)$('#public-status').textContent='Catálogo online indisponível neste momento. Você ainda pode conectar uma fonte própria nas configurações.';});},250);
+setTimeout(()=>{Promise.all([loadPublicLive(),loadPublicList('filmes'),loadPublicList('series')]).then(([live,movies,series])=>{if(!live&&!movies&&!series)$('#public-status').textContent='Catálogo online indisponível neste momento. Você ainda pode conectar uma fonte própria nas configurações.';});},250);
 })();
