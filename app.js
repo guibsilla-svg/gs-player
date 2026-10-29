@@ -113,13 +113,26 @@ function play(item){
  v.onwaiting=()=>{if(!started)status.textContent='Aguardando dados do canal…'};
  v.onerror=()=>{const e=v.error;const codes={1:'reprodução cancelada',2:'erro de rede',3:'formato ou codec de vídeo incompatível',4:'formato ou fonte não suportada'};status.textContent='Falha no vídeo: '+(e?(codes[e.code]||('código '+e.code)):'erro desconhecido')+'. Como o SBT funciona, este canal pode estar indisponível ou usar um formato incompatível.';};
  const url=String(item.url),isHls=/\.m3u8(?:$|[?#])/i.test(url);
- if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o canal.';}
- else if(isHls&&window.Hls&&window.Hls.isSupported()){
+ // Prefer Hls.js when MediaSource is available: some browsers report native HLS
+ // support even when their native player cannot handle the stream reliably.
+ if(isHls&&window.Hls&&window.Hls.isSupported()){
   hls=new Hls({enableWorker:false});
+  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Transmissão carregada. Se necessário, pressione Reproduzir.';});
+  hls.on(Hls.Events.ERROR,(_event,data)=>{
+   if(data&&data.fatal){
+    const kind=data.type||'erro',detail=data.details||'detalhe indisponível';
+    status.textContent='Falha HLS ('+kind+'): '+detail+'. O fluxo pode estar offline ou o servidor pode bloquear acesso externo (CORS).';
+    try{hls.destroy()}catch(ignore){}hls=null;
+   }
+  });
   hls.loadSource(url);hls.attachMedia(v);
-  hls.on(Hls.Events.MANIFEST_PARSED,()=>{status.textContent='Canal carregado. Toque em Reproduzir para começar.'});
-  hls.on(Hls.Events.ERROR,(_event,data)=>{if(data&&data.fatal){const kind=data.type||'erro';const detail=data.details||'detalhe indisponível';status.textContent='Falha HLS ('+kind+'): '+detail+'. O canal pode estar offline, bloquear acesso externo ou usar um formato incompatível.';try{hls.destroy()}catch(ignore){}hls=null;}});
- }else{v.src=url;v.load();status.textContent='Toque em Reproduzir para iniciar o vídeo.'}
+  status.textContent='Preparando transmissão HLS…';
+ }else if(isHls&&v.canPlayType('application/vnd.apple.mpegurl')){
+  v.src=url;v.load();status.textContent='HLS nativo carregado. Pressione Reproduzir.';
+ }else{
+  v.src=url;v.load();
+  status.textContent=isHls?'Este navegador não oferece suporte HLS compatível para este canal.':'Fonte direta carregada. Pressione Reproduzir.';
+ }
  // Put keyboard/remote focus on the video first so the TV's Play key targets the player.
  v.focus();
 }
